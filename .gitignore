@@ -18,3 +18,14 @@ __pycache__/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local datasets
+data/raw/
+data/processed/
+
+# Trained model artifacts
+models/
+*.joblib
+
+# Pytest cache
+.pytest_cache/
