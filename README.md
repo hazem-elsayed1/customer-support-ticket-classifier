@@ -1,9 +1,11 @@
 
-# AI Customer Support Ticket Classifier
 
-An NLP-based machine learning project that automatically classifies consumer financial complaints into 11 product categories.
+# Financial Complaint Classifier
+
+An NLP-based machine learning project that automatically classifies consumer financial complaints into 11 product categories using TF-IDF and Logistic Regression.
 
 ## Project Overview
+
 
 This project uses TF-IDF feature extraction and Logistic Regression to classify complaint narratives from the Consumer Financial Protection Bureau (CFPB) Consumer Complaint Database.
 
