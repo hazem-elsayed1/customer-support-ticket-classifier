@@ -68,6 +68,42 @@ Evaluation on 3,833 held-out test complaints:
 
 The final model was trained using 15,330 complaints and evaluated on a separate held-out test set.
 
+
+
+### Reproducing the Final Evaluation
+
+After preparing the cleaned CFPB dataset, run:
+
+```powershell
+python -m src.evaluate
+```
+
+The script:
+
+1. Creates a reproducible stratified 80/20 train-test split.
+2. Trains the selected TF-IDF + Logistic Regression pipeline on 80% of the cleaned data.
+3. Evaluates the model on the held-out 20%.
+4. Saves aggregated evaluation results to `reports/test_metrics.json`.
+
+The report includes:
+- Test accuracy
+- Macro F1-score
+- Per-class precision, recall, F1-score, and support
+- Confusion matrix and class labels
+
+The selected hyperparameters were determined before final test evaluation.
+
+Reported test results:
+
+| Metric | Value |
+|---|---|
+| Test samples | 3,833 |
+| Accuracy | 0.8155 |
+| Macro F1-score | 0.7380 |
+
+The report contains aggregated metrics only, not original complaint narratives.
+```
+
 ### Limitations
 
 - Performance varies across product categories.

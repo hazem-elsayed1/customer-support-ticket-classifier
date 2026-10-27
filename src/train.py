@@ -108,19 +108,28 @@ def save_model(model: Pipeline, model_path: str) -> None:
 
     joblib.dump(model, path)
 
+
 def train_final_model(csv_path: str) -> Pipeline:
     """Train the selected model on train + validation data."""
 
+    model, _, _ = train_final_model_with_test_data(csv_path)
+
+    return model
+
+
+
+def train_final_model_with_test_data(csv_path: str):
+    """Train on train + validation and return held-out test data."""
+
     X, y = load_training_data(csv_path)
 
-    X_train_val, X_test, y_train_val, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.20,
-        stratify=y,
-        random_state=42
+    X_train, X_val, X_test, y_train, y_val, y_test = split_data(
+        X, y
     )
+
+    X_train_val = pd.concat([X_train, X_val])
+    y_train_val = pd.concat([y_train, y_val])
 
     model = train_model(X_train_val, y_train_val)
 
-    return model
+    return model, X_test, y_test
