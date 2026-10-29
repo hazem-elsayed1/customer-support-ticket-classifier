@@ -1,0 +1,62 @@
+{
+  "train_samples": 15330,
+  "test_samples": 3833,
+  "similarity_method": "TF-IDF cosine similarity",
+  "mean_max_similarity": 0.35148870290218953,
+  "median_max_similarity": 0.27000276940759416,
+  "threshold_counts": {
+    "0.80": 421,
+    "0.90": 340,
+    "0.95": 263,
+    "0.99": 85
+  },
+  "group_performance": {
+    "high_similarity": {
+      "samples": 263,
+      "accuracy": 0.9619771863117871,
+      "macro_f1": 0.659398526418394
+    },
+    "lower_similarity": {
+      "samples": 3570,
+      "accuracy": 0.8047619047619048,
+      "macro_f1": 0.7272233976353504
+    }
+  },
+  "group_class_distribution": {
+    "high_similarity": {
+      "Debt collection": 231,
+      "Credit reporting or other personal consumer reports": 15,
+      "Money transfer, virtual currency, or money service": 6,
+      "Debt or credit management": 4,
+      "Credit card": 3,
+      "Mortgage": 2,
+      "Vehicle loan or lease": 1,
+      "Student loan": 1
+    },
+    "lower_similarity": {
+      "Debt collection": 998,
+      "Checking or savings account": 689,
+      "Credit card": 667,
+      "Money transfer, virtual currency, or money service": 325,
+      "Mortgage": 249,
+      "Vehicle loan or lease": 199,
+      "Student loan": 140,
+      "Payday loan, title loan, personal loan, or advance loan": 134,
+      "Credit reporting or other personal consumer reports": 89,
+      "Prepaid card": 43,
+      "Debt or credit management": 37
+    }
+  },
+  "debt_collection_performance": {
+    "high_similarity": {
+      "samples": 231,
+      "accuracy": 0.961038961038961,
+      "macro_f1": 0.12251655629139073
+    },
+    "lower_similarity": {
+      "samples": 998,
+      "accuracy": 0.8396793587174348,
+      "macro_f1": 0.09128540305010893
+    }
+  }
+}

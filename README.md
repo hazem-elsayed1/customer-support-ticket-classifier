@@ -78,6 +78,56 @@ After preparing the cleaned CFPB dataset, run:
 python -m src.evaluate
 ```
 
+
+### Near-Duplicate Diagnostic Analysis
+
+We investigated potential textual overlap between training
+and test complaints using TF-IDF cosine similarity.
+
+Run the diagnostic:
+
+```powershell
+python -m src.near_duplicate_analysis
+```
+
+The analysis uses the original stratified split and does
+not change the training data, test set, or model parameters.
+
+#### Findings
+
+| Metric | Result |
+|---|---:|
+| Training samples | 15,330 |
+| Test samples | 3,833 |
+| Mean maximum similarity | 0.3515 |
+| Test samples with similarity >= 0.95 | 263 (6.86%) |
+| High-similarity group accuracy | 96.20% |
+| Lower-similarity group accuracy | 80.48% |
+
+Of the 263 high-similarity complaints, 231 belong to the
+Debt collection category.
+
+Within Debt collection, recall was 96.10% for the
+high-similarity group and 83.97% for the lower-similarity
+group.
+
+These results suggest that highly similar complaints may
+contribute to optimistic performance estimates.
+
+However, textual similarity alone does not establish data
+leakage, and differences in class distributions may
+partially explain the observed performance gap.
+
+The reported 81.55% test accuracy remains the result of
+the original random stratified split. It should not be
+interpreted as guaranteed performance on independent
+future complaints.
+
+A group-aware or time-based evaluation is a potential
+future robustness check.
+
+
+
 The script:
 
 1. Creates a reproducible stratified 80/20 train-test split.
