@@ -9,6 +9,8 @@ This project uses TF-IDF feature extraction and Logistic Regression to classify 
 
 The goal is to build a reproducible text-classification pipeline, evaluate its performance, and provide reusable training and prediction modules.
 
+The project also includes an interactive Streamlit application for testing the trained classifier.
+
 ## Dataset
 
 Source: [CFPB Consumer Complaint Database](https://www.consumerfinance.gov/data-research/consumer-complaints/)
@@ -224,11 +226,9 @@ In particular, GroupShuffleSplit does not guarantee class stratification.
 
 This experiment provides additional evidence about model robustness but does not replace the original held-out evaluation.
 
-Aggregated results are available in:
+Aggregated results are available in `reports/group_aware_evaluation.json`.
 
-`reports/group_aware_evaluation.json`
-
-To reproduce the group-aware evaluation from the project root after preparing the cleaned dataset:
+To reproduce the experiment after preparing the cleaned dataset:
 
 ```powershell
 python -c "from src.group_aware_evaluation import evaluate_group_aware; print(evaluate_group_aware())"
@@ -250,6 +250,8 @@ Note: Running `python -m src.group_aware_evaluation` currently executes a small 
 
 ```text
 financial-complaint-classifier/
+|
+|-- app.py                     # Streamlit application
 |
 |-- data/
 |   |-- raw/                   # Local original dataset
@@ -277,7 +279,8 @@ financial-complaint-classifier/
 |   |-- test_predict.py
 |   |-- test_evaluate.py
 |   |-- test_near_duplicate_analysis.py
-|   `-- test_group_aware_evaluation.py
+|   |-- test_group_aware_evaluation.py
+|   `-- test_app.py
 |
 |-- reports/
 |   |-- test_metrics.json
@@ -329,7 +332,7 @@ source .venv/bin/activate
 
 ### 4. Install dependencies
 
-For running the classifier:
+For running the classifier and Streamlit application:
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -385,7 +388,7 @@ Run the complete automated test suite:
 python -m pytest tests/ -q
 ```
 
-The project currently includes 24 automated tests covering:
+The project currently includes 27 automated tests covering:
 
 - Data cleaning and deduplication
 - Empty normalized text handling
@@ -402,6 +405,7 @@ The project currently includes 24 automated tests covering:
 - Grouping consistency across batches
 - Group-aware train/test split isolation
 - Group-aware evaluation report generation
+- Streamlit interface title, input, and empty-complaint validation
 
 ## Training the Model
 
@@ -441,6 +445,52 @@ print(prediction)
 
 Only load model files from trusted sources. Loading untrusted joblib files can execute arbitrary code.
 
+## Interactive Streamlit Demo
+
+The project includes an interactive Streamlit application for classifying financial complaint narratives using the trained TF-IDF and Logistic Regression model.
+
+### Features
+
+- Enter a financial complaint in a text area.
+- Classify the complaint using the trained model.
+- Display the predicted financial product category.
+- Validate empty inputs and show helpful messages.
+- Cache the trained model to avoid repeated loading.
+
+### Running the Application
+
+First, install the runtime dependencies:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+The trained model is not included in the repository because model artifacts are excluded from version control.
+
+After preparing the cleaned dataset, generate the model locally:
+
+```powershell
+python -c "from src.train import train_final_model, save_model; model = train_final_model('data/processed/cleaned_complaints.csv'); save_model(model, 'models/ticket_classifier.joblib')"
+```
+
+Then start the application:
+
+```powershell
+python -m streamlit run app.py
+```
+
+Open `http://localhost:8501` in your browser.
+
+### Example Complaint
+
+"My credit card payment was charged twice, and the bank has refused to correct the transaction."
+
+In the local demonstration, the trained model predicted:
+
+**Credit card**
+
+The application provides predictions for informational purposes and should not replace human review in high-impact financial decisions.
+
 ## Reproducibility
 
 The project includes:
@@ -453,6 +503,7 @@ The project includes:
 - Group-aware robustness evaluation
 - Aggregated JSON reports
 - Automated tests using pytest
+- Streamlit application tests
 - Pinned direct dependencies in `requirements.txt` and `requirements-dev.txt`
 
 The dataset snapshot and filtering criteria affect reproducibility.
@@ -486,8 +537,8 @@ This helps detect regressions when the source code changes.
 - Investigate near-duplicate complaint groups more deeply.
 - Add confidence intervals for evaluation metrics.
 - Add a REST API for inference.
-- Build an interactive interface for complaint classification.
-- Add deployment and model monitoring.
+- Deploy the Streamlit demo.
+- Add model monitoring.
 - Improve packaging and dependency management.
 
 ## License
