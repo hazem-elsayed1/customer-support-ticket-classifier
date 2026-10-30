@@ -446,7 +446,7 @@ print(prediction)
 Only load model files from trusted sources. Loading untrusted joblib files can execute arbitrary code.
 
 ## Interactive Streamlit Demo
-
+![Streamlit Demo](assets/streamlit-demo.png)
 The project includes an interactive Streamlit application for classifying financial complaint narratives using the trained TF-IDF and Logistic Regression model.
 
 ### Features
