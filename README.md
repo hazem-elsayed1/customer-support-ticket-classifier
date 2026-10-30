@@ -1,11 +1,9 @@
 
-
 # Financial Complaint Classifier
 
 An NLP-based machine learning project that automatically classifies consumer financial complaints into 11 product categories using TF-IDF and Logistic Regression.
 
 ## Project Overview
-
 
 This project uses TF-IDF feature extraction and Logistic Regression to classify complaint narratives from the Consumer Financial Protection Bureau (CFPB) Consumer Complaint Database.
 
@@ -13,7 +11,7 @@ The goal is to build a reproducible text-classification pipeline, evaluate its p
 
 ## Dataset
 
-Source: CFPB Consumer Complaint Database
+Source: [CFPB Consumer Complaint Database](https://www.consumerfinance.gov/data-research/consumer-complaints/)
 
 - Original records: 614,945
 - Cleaned records: 19,163
@@ -26,49 +24,58 @@ Source: CFPB Consumer Complaint Database
 The cleaning pipeline:
 
 1. Removes missing complaint narratives.
-2. Removes narratives associated with conflicting product labels.
-3. Removes exact duplicate narratives.
-4. Removes normalized duplicate narratives.
+2. Removes narratives that become empty after normalization.
+3. Removes narratives associated with conflicting product labels.
+4. Removes exact duplicate narratives.
+5. Removes groups with conflicting labels after normalization.
+6. Removes normalized duplicate narratives.
 
-The original narrative text is preserved for model training.
+Normalization is used for duplicate detection only. It lowercases text, removes standalone `XXXX` placeholders, and normalizes whitespace.
+
+The original complaint narrative is preserved for model training.
 
 Raw and processed datasets are excluded from version control.
 
 ## Model Architecture
 
-Complaint Text
-    |
-    v
+The classification pipeline is:
+
+```text
+Complaint Narrative
+        |
+        v
 TF-IDF Vectorizer
-    |
-    v
+        |
+        v
 Logistic Regression
-    |
-    v
+        |
+        v
 Predicted Product Category
+```
 
-Selected hyperparameters:
+### Selected Hyperparameters
 
-- min_df = 2
-- ngram_range = (1, 2)
-- class_weight = balanced
-- C = 2.0
-- max_iter = 1000
+| Parameter | Value |
+|---|---|
+| TF-IDF min_df | 2 |
+| TF-IDF ngram_range | (1, 2) |
+| Logistic Regression C | 2.0 |
+| Logistic Regression max_iter | 1000 |
+| Logistic Regression class_weight | balanced |
+| Random seed for splitting | 42 |
 
 Hyperparameters were selected using validation experiments and stratified cross-validation.
 
 ## Final Model Performance
 
-Evaluation on 3,833 held-out test complaints:
+The final model was trained on 15,330 complaints and evaluated on 3,833 held-out test complaints.
 
 | Metric | Score |
-|---|---|
-| Accuracy | 81.55% |
+|---|---:|
+| Test accuracy | 81.55% |
 | Macro F1-score | 73.80% |
 
-The final model was trained using 15,330 complaints and evaluated on a separate held-out test set.
-
-
+Performance varies across the 11 product categories. Some minority classes have substantially lower recall than the more common categories.
 
 ### Reproducing the Final Evaluation
 
@@ -78,11 +85,29 @@ After preparing the cleaned CFPB dataset, run:
 python -m src.evaluate
 ```
 
+The evaluation script:
+
+1. Creates a reproducible stratified 80/20 train-test split.
+2. Trains the selected TF-IDF and Logistic Regression pipeline on the 80% training portion.
+3. Evaluates the model on the held-out 20%.
+4. Saves aggregated evaluation results to `reports/test_metrics.json`.
+
+The report includes:
+
+- Test accuracy
+- Macro F1-score
+- Per-class precision, recall, F1-score, and support
+- Confusion matrix and class labels
+
+The selected hyperparameters were determined before final test evaluation.
+
+The results were reproduced locally using the same cleaned dataset and configuration.
+
+The report contains aggregated metrics only, not original complaint narratives.
 
 ### Near-Duplicate Diagnostic Analysis
 
-We investigated potential textual overlap between training
-and test complaints using TF-IDF cosine similarity.
+We investigated potential textual overlap between training and test complaints using TF-IDF cosine similarity.
 
 Run the diagnostic:
 
@@ -90,8 +115,7 @@ Run the diagnostic:
 python -m src.near_duplicate_analysis
 ```
 
-The analysis uses the original stratified split and does
-not change the training data, test set, or model parameters.
+The analysis uses the original stratified split. It does not alter the cleaned dataset, test set, or selected model parameters.
 
 #### Findings
 
@@ -100,99 +124,132 @@ not change the training data, test set, or model parameters.
 | Training samples | 15,330 |
 | Test samples | 3,833 |
 | Mean maximum similarity | 0.3515 |
+| Median maximum similarity | 0.2700 |
+| Test samples with similarity >= 0.80 | 421 |
+| Test samples with similarity >= 0.90 | 340 |
 | Test samples with similarity >= 0.95 | 263 (6.86%) |
-| High-similarity group accuracy | 96.20% |
-| Lower-similarity group accuracy | 80.48% |
+| Test samples with similarity >= 0.99 | 85 |
+| High-similarity group accuracy (>= 0.95) | 96.20% |
+| Lower-similarity group accuracy (< 0.95) | 80.48% |
 
-Of the 263 high-similarity complaints, 231 belong to the
-Debt collection category.
+Of the 263 high-similarity complaints, 231 belong to the Debt collection category.
 
-Within Debt collection, recall was 96.10% for the
-high-similarity group and 83.97% for the lower-similarity
-group.
+Within Debt collection, recall was:
 
-These results suggest that highly similar complaints may
-contribute to optimistic performance estimates.
+- 96.10% for the high-similarity group.
+- 83.97% for the lower-similarity group.
 
-However, textual similarity alone does not establish data
-leakage, and differences in class distributions may
-partially explain the observed performance gap.
+These findings suggest that highly similar complaints may contribute to optimistic performance estimates.
 
-The reported 81.55% test accuracy remains the result of
-the original random stratified split. It should not be
-interpreted as guaranteed performance on independent
-future complaints.
+However, high textual similarity alone does not establish data leakage. Differences in class distributions and complaint characteristics may partially explain the observed gap.
 
-A group-aware or time-based evaluation is a potential
-future robustness check.
+The reported 81.55% accuracy remains the result of the original random stratified split. It should not be interpreted as guaranteed performance on independent future complaints.
 
+A group-aware or time-based evaluation is a potential future robustness check.
 
+Aggregated diagnostic results are available in `reports/near_duplicate_analysis.json`.
 
-The script:
-
-1. Creates a reproducible stratified 80/20 train-test split.
-2. Trains the selected TF-IDF + Logistic Regression pipeline on 80% of the cleaned data.
-3. Evaluates the model on the held-out 20%.
-4. Saves aggregated evaluation results to `reports/test_metrics.json`.
-
-The report includes:
-- Test accuracy
-- Macro F1-score
-- Per-class precision, recall, F1-score, and support
-- Confusion matrix and class labels
-
-The selected hyperparameters were determined before final test evaluation.
-
-Reported test results:
-
-| Metric | Value |
-|---|---|
-| Test samples | 3,833 |
-| Accuracy | 0.8155 |
-| Macro F1-score | 0.7380 |
-
-The report contains aggregated metrics only, not original complaint narratives.
-```
-
-### Limitations
+## Limitations
 
 - Performance varies across product categories.
-- Debt or credit management and prepaid card complaints have relatively low recall.
-- The dataset focuses on financial complaints rather than general customer support tickets.
+- Minority classes, including Debt or credit management and Prepaid card, have relatively low recall.
+- The dataset focuses on financial complaints rather than general customer support requests.
+- The random stratified evaluation may not represent performance on future or independent complaint groups.
+- Highly similar narratives can exist across the training and test sets.
 - Model predictions should not replace human review in high-impact decisions.
 
 ## Project Structure
 
 ```text
-data/          Local raw and processed datasets
-notebooks/     EDA, preprocessing, baseline, and experiments
-src/           Data processing, training, and prediction
-tests/         Automated tests
-models/        Locally saved trained models
-requirements.txt
-README.md
+financial-complaint-classifier/
+|
+|-- data/
+|   |-- raw/                  # Local original dataset
+|   `-- processed/            # Local cleaned dataset
+|
+|-- models/                   # Local trained models
+|
+|-- notebooks/
+|   |-- 01_data_understanding.ipynb
+|   |-- 02_text_preprocessing.ipynb
+|   |-- 03_baseline_model.ipynb
+|   `-- 04_model_experiments.ipynb
+|
+|-- src/
+|   |-- data_processing.py
+|   |-- train.py
+|   |-- predict.py
+|   |-- evaluate.py
+|   `-- near_duplicate_analysis.py
+|
+|-- tests/
+|   |-- test_data_processing.py
+|   |-- test_train.py
+|   |-- test_predict.py
+|   |-- test_evaluate.py
+|   `-- test_near_duplicate_analysis.py
+|
+|-- reports/
+|   |-- test_metrics.json
+|   `-- near_duplicate_analysis.json
+|
+|-- .github/
+|   `-- workflows/
+|       `-- tests.yml
+|
+|-- .gitignore
+|-- requirements.txt
+`-- README.md
 ```
+
+Raw datasets, processed datasets, and trained model artifacts are stored locally and are not committed to the repository.
 
 ## Installation
 
-Python 3.14 is recommended for reproducing the development environment.
+Python 3.14 was used during development.
+
+### 1. Clone the repository
+
+```powershell
+git clone https://github.com/hazem-elsayed1/financial-complaint-classifier.git
+cd financial-complaint-classifier
+```
+
+### 2. Create a virtual environment
 
 ```powershell
 python -m venv .venv
+```
+
+### 3. Activate the virtual environment
+
+Windows PowerShell:
+
+```powershell
 .\.venv\Scripts\Activate.ps1
+```
+
+macOS / Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+### 4. Install dependencies
+
+```powershell
 python -m pip install -r requirements.txt
 ```
 
-
 ## Dataset Preparation
 
-This project uses the Consumer Financial Protection Bureau
-(CFPB) Consumer Complaint Database.
+This project uses the Consumer Financial Protection Bureau (CFPB) Consumer Complaint Database.
 
 Download the dataset from:
+
 https://www.consumerfinance.gov/data-research/consumer-complaints/
 
-The experiments in this repository used the dataset export:
+The original experiments used the export:
 
 `CCDB_Export_16_March_2026.csv`
 
@@ -200,43 +257,66 @@ Place the CSV file inside:
 
 `data/raw/`
 
-The training scripts expect a cleaned dataset at:
+The training and evaluation scripts expect the cleaned dataset at:
 
 `data/processed/cleaned_complaints.csv`
 
 To generate it, run the following command from the project root:
 
 ```powershell
-python -c "import pandas as pd; from pathlib import Path; from src.data_processing import clean_dataset; source=Path('data/raw/CCDB_Export_16_March_2026.csv'); output=Path('data/processed/cleaned_complaints.csv'); output.parent.mkdir(parents=True,exist_ok=True); clean_dataset(pd.read_csv(source)).to_csv(output,index=False)"
+python -m src.data_processing --input data/raw/CCDB_Export_16_March_2026.csv --output data/processed/cleaned_complaints.csv
 ```
 
-The processed dataset contains 19,163 complaint narratives
-when generated from the original export used in this project.
+The command reads the input CSV, applies the cleaning pipeline, and saves the processed dataset.
 
-Different dataset versions may produce different results.
+The original export used in this project contains 614,945 records and produces 19,163 cleaned complaints.
 
-Neither the raw data nor the cleaned dataset is included
-in this repository.
-```
+Different versions or filters of the CFPB dataset may produce different results.
 
-
+Neither the raw dataset nor the cleaned dataset is included in this repository.
 
 ## Running Tests
 
+Run the complete automated test suite:
+
 ```powershell
-python -m pytest tests/ -v
+python -m pytest tests/ -q
 ```
+
+The project currently includes 16 automated tests covering:
+
+- Data cleaning and deduplication
+- Empty normalized text handling
+- Conflicting-label handling
+- Data cleaning CLI
+- Data splitting and reproducibility
+- Final training split consistency
+- Model prediction
+- Model serialization and deserialization
+- Evaluation report generation
+- Near-duplicate similarity calculations
+- Diagnostic report consistency
 
 ## Training the Model
 
-After obtaining and preparing the CFPB dataset:
+After preparing the cleaned CFPB dataset:
 
 ```python
 from src.train import train_final_model, save_model
 
-model = train_final_model("data/processed/cleaned_complaints.csv")
-save_model(model, "models/ticket_classifier.joblib")
+model = train_final_model(
+    "data/processed/cleaned_complaints.csv"
+)
+
+save_model(
+    model,
+    "models/ticket_classifier.joblib"
+)
 ```
+
+The final model uses 80% of the cleaned dataset for training and reserves 20% for held-out testing.
+
+The model file is saved locally and is excluded from version control.
 
 ## Making Predictions
 
@@ -253,21 +333,52 @@ prediction = predict_complaint(
 print(prediction)
 ```
 
+Only load model files from trusted sources. Loading untrusted joblib files can execute arbitrary code.
+
 ## Reproducibility
 
+The project includes:
+
 - Fixed random seed: 42
-- Stratified train/validation/test splits
-- TF-IDF and Logistic Regression combined in a Pipeline
+- Stratified train/validation/test splitting
+- TF-IDF and Logistic Regression combined in a scikit-learn Pipeline
 - Held-out test evaluation
+- Reproducible evaluation and diagnostic scripts
+- Aggregated JSON reports
 - Automated tests using pytest
+- Pinned direct dependencies in `requirements.txt`
+
+The dataset snapshot and filtering criteria affect reproducibility. The raw data is not distributed with the repository.
+
+## Continuous Integration
+
+The project uses GitHub Actions to run automated tests.
+
+Workflow file:
+
+`.github/workflows/tests.yml`
+
+The workflow runs on pushes and pull requests, using Ubuntu and Python 3.14.
+
+It installs the project dependencies and executes:
+
+```powershell
+python -m pytest tests/ -q
+```
+
+This helps detect regressions when the source code changes.
 
 ## Future Improvements
 
 - Improve minority-class recall.
-- Compare alternative text classifiers.
+- Compare Logistic Regression against additional text classifiers.
+- Add group-aware or time-based evaluation.
+- Investigate near-duplicate complaint groups more deeply.
+- Add confidence intervals for evaluation metrics.
 - Add a REST API for inference.
-- Add CI/CD workflows.
-- Monitor model performance on new complaints.
+- Build an interactive interface for complaint classification.
+- Add deployment and model monitoring.
+- Improve packaging and dependency management.
 
 ## License
 

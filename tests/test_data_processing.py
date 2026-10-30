@@ -1,6 +1,7 @@
 
 import pandas as pd
-
+import subprocess
+import sys
 from src.data_processing import remove_missing_narratives
 from src.data_processing import (
     remove_conflicting_labels,
@@ -187,3 +188,55 @@ def test_clean_dataset_removes_normalized_label_conflicts():
         result.iloc[0]["Consumer complaint narrative"]
         == "My mortgage payment is incorrect."
     )
+
+
+def test_data_processing_cli(tmp_path):
+    """Verify that the CLI cleans and saves a CSV file."""
+
+    input_path = tmp_path / "raw.csv"
+    output_path = tmp_path / "processed" / "cleaned.csv"
+
+    df = pd.DataFrame({
+        "Consumer complaint narrative": [
+            "XXXX",
+            "My credit card was charged twice.",
+            "My credit card was charged twice.",
+            "My mortgage payment was incorrect.",
+        ],
+        "Product": [
+            "Credit card",
+            "Credit card",
+            "Credit card",
+            "Mortgage",
+        ],
+    })
+
+    df.to_csv(input_path, index=False)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.data_processing",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert output_path.is_file()
+
+    cleaned = pd.read_csv(output_path)
+
+    assert len(cleaned) == 2
+    assert set(cleaned["Product"]) == {
+        "Credit card",
+        "Mortgage",
+    }
+
+    assert "Original rows: 4" in result.stdout
+    assert "Cleaned rows: 2" in result.stdout

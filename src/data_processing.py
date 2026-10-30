@@ -2,6 +2,9 @@
 import pandas as pd
 import re
 
+import argparse
+from pathlib import Path
+
 TEXT_COL = "Consumer complaint narrative"
 TARGET_COL = "Product"
 
@@ -100,3 +103,51 @@ def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
 
 
     return df_clean
+
+
+
+def main():
+    """Run the data cleaning pipeline from the command line."""
+
+    parser = argparse.ArgumentParser(
+        description="Clean CFPB financial complaint data."
+    )
+
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Path to the raw complaints CSV file.",
+    )
+
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Path to save the cleaned CSV file.",
+    )
+
+    args = parser.parse_args()
+
+    input_path = Path(args.input)
+    output_path = Path(args.output)
+
+    if not input_path.is_file():
+        parser.error(f"Input file not found: {input_path}")
+
+    df = pd.read_csv(input_path)
+
+    cleaned_df = clean_dataset(df)
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    cleaned_df.to_csv(output_path, index=False)
+
+    print(f"Original rows: {len(df)}")
+    print(f"Cleaned rows: {len(cleaned_df)}")
+    print(f"Saved to: {output_path}")
+
+
+if __name__ == "__main__":
+    main()
