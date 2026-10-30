@@ -1,4 +1,3 @@
-
 # Financial Complaint Classifier
 
 An NLP-based machine learning project that automatically classifies consumer financial complaints into 11 product categories using TF-IDF and Logistic Regression.
@@ -199,6 +198,7 @@ financial-complaint-classifier/
 |
 |-- .gitignore
 |-- requirements.txt
+|-- requirements-dev.txt
 `-- README.md
 ```
 
@@ -237,9 +237,19 @@ source .venv/bin/activate
 
 ### 4. Install dependencies
 
+For running the classifier:
+
 ```powershell
 python -m pip install -r requirements.txt
 ```
+
+For development, notebooks, and automated testing:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+```
+
+The development requirements include all runtime dependencies.
 
 ## Dataset Preparation
 
@@ -346,7 +356,7 @@ The project includes:
 - Reproducible evaluation and diagnostic scripts
 - Aggregated JSON reports
 - Automated tests using pytest
-- Pinned direct dependencies in `requirements.txt`
+- Pinned direct dependencies in `requirements.txt` and `requirements-dev.txt`
 
 The dataset snapshot and filtering criteria affect reproducibility. The raw data is not distributed with the repository.
 
@@ -360,7 +370,7 @@ Workflow file:
 
 The workflow runs on pushes and pull requests, using Ubuntu and Python 3.14.
 
-It installs the project dependencies and executes:
+It installs the development dependencies from `requirements-dev.txt` and executes:
 
 ```powershell
 python -m pytest tests/ -q
