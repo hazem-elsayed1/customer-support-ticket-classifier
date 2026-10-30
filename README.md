@@ -1,3 +1,4 @@
+
 # Financial Complaint Classifier
 
 An NLP-based machine learning project that automatically classifies consumer financial complaints into 11 product categories using TF-IDF and Logistic Regression.
@@ -144,9 +145,96 @@ However, high textual similarity alone does not establish data leakage. Differen
 
 The reported 81.55% accuracy remains the result of the original random stratified split. It should not be interpreted as guaranteed performance on independent future complaints.
 
-A group-aware or time-based evaluation is a potential future robustness check.
-
 Aggregated diagnostic results are available in `reports/near_duplicate_analysis.json`.
+
+### Group-Aware Robustness Evaluation
+
+An additional robustness experiment evaluates the selected TF-IDF and Logistic Regression model using a group-disjoint train/test split.
+
+The purpose is to investigate whether highly similar complaints appearing in both training and testing affect the reported model performance.
+
+#### Methodology
+
+The evaluation follows these steps:
+
+1. Load all 19,163 cleaned complaint narratives.
+2. Transform the narratives using TF-IDF with unigram and bigram features.
+3. Calculate cosine similarity using batched sparse computations.
+4. Connect complaint pairs with cosine similarity >= 0.95.
+5. Use connected components to create text-based groups.
+6. Apply GroupShuffleSplit with a fixed random seed of 42.
+7. Ensure that no text group appears in both training and testing.
+8. Train the selected TF-IDF and Logistic Regression pipeline.
+9. Evaluate accuracy and macro F1-score.
+10. Save aggregated results to a JSON report.
+
+The grouping procedure is unsupervised but uses text from the entire dataset. Therefore, this experiment is a robustness diagnostic rather than a fully independent evaluation.
+
+#### Grouping Statistics
+
+| Metric | Result |
+|---|---:|
+| Total complaints | 19,163 |
+| Total text groups | 18,212 |
+| Groups with multiple complaints | 306 |
+| Complaints in multi-member groups | 1,257 |
+| Largest group | 408 |
+| Similarity threshold | 0.95 |
+
+Connected components can form relatively large groups because of transitive similarity links.
+
+For example, if complaint A is highly similar to B, and B is highly similar to C, all three may belong to the same group even if A and C are less similar to each other.
+
+This behavior is relevant to the objective of preventing high-similarity links from crossing the train/test boundary.
+
+#### Evaluation Results
+
+| Metric | Original Evaluation | Group-Aware Evaluation |
+|---|---:|---:|
+| Accuracy | 81.55% | 82.16% |
+| Macro F1-score | 73.80% | 72.14% |
+| Training samples | 15,330 | 15,021 |
+| Test samples | 3,833 | 4,142 |
+
+Additional group-aware split statistics:
+
+| Metric | Result |
+|---|---:|
+| Training groups | 14,569 |
+| Testing groups | 3,643 |
+| Group overlap | 0 |
+| Classes in training | 11 |
+| Classes in testing | 11 |
+
+The group-aware evaluation produced slightly higher accuracy but lower macro F1-score than the original stratified evaluation.
+
+These differences should not be interpreted as a direct measurement of the effect of removing near-duplicate overlap because the experiments use different test samples and class distributions.
+
+In particular, GroupShuffleSplit does not guarantee class stratification.
+
+#### Limitations
+
+- The grouping process uses text from the full dataset.
+- Connected components can create large groups through chains of similarity links.
+- GroupShuffleSplit does not guarantee identical class proportions between training and testing.
+- The experiment uses a single random group-aware split.
+- Text-based groups do not necessarily represent independent customers or real-world complaint events.
+- The similarity threshold of 0.95 is a diagnostic choice.
+- Results are not guaranteed to represent performance on future complaints.
+
+This experiment provides additional evidence about model robustness but does not replace the original held-out evaluation.
+
+Aggregated results are available in:
+
+`reports/group_aware_evaluation.json`
+
+To reproduce the group-aware evaluation from the project root after preparing the cleaned dataset:
+
+```powershell
+python -c "from src.group_aware_evaluation import evaluate_group_aware; print(evaluate_group_aware())"
+```
+
+Note: Running `python -m src.group_aware_evaluation` currently executes a small grouping demonstration rather than the full evaluation.
 
 ## Limitations
 
@@ -154,7 +242,8 @@ Aggregated diagnostic results are available in `reports/near_duplicate_analysis.
 - Minority classes, including Debt or credit management and Prepaid card, have relatively low recall.
 - The dataset focuses on financial complaints rather than general customer support requests.
 - The random stratified evaluation may not represent performance on future or independent complaint groups.
-- Highly similar narratives can exist across the training and test sets.
+- Highly similar narratives can exist across the original training and test sets.
+- Group-aware splitting is an additional diagnostic, not proof of future generalization.
 - Model predictions should not replace human review in high-impact decisions.
 
 ## Project Structure
@@ -163,10 +252,10 @@ Aggregated diagnostic results are available in `reports/near_duplicate_analysis.
 financial-complaint-classifier/
 |
 |-- data/
-|   |-- raw/                  # Local original dataset
-|   `-- processed/            # Local cleaned dataset
+|   |-- raw/                   # Local original dataset
+|   `-- processed/             # Local cleaned dataset
 |
-|-- models/                   # Local trained models
+|-- models/                    # Local trained models
 |
 |-- notebooks/
 |   |-- 01_data_understanding.ipynb
@@ -179,18 +268,21 @@ financial-complaint-classifier/
 |   |-- train.py
 |   |-- predict.py
 |   |-- evaluate.py
-|   `-- near_duplicate_analysis.py
+|   |-- near_duplicate_analysis.py
+|   `-- group_aware_evaluation.py
 |
 |-- tests/
 |   |-- test_data_processing.py
 |   |-- test_train.py
 |   |-- test_predict.py
 |   |-- test_evaluate.py
-|   `-- test_near_duplicate_analysis.py
+|   |-- test_near_duplicate_analysis.py
+|   `-- test_group_aware_evaluation.py
 |
 |-- reports/
 |   |-- test_metrics.json
-|   `-- near_duplicate_analysis.json
+|   |-- near_duplicate_analysis.json
+|   `-- group_aware_evaluation.json
 |
 |-- .github/
 |   `-- workflows/
@@ -293,7 +385,7 @@ Run the complete automated test suite:
 python -m pytest tests/ -q
 ```
 
-The project currently includes 16 automated tests covering:
+The project currently includes 24 automated tests covering:
 
 - Data cleaning and deduplication
 - Empty normalized text handling
@@ -305,7 +397,11 @@ The project currently includes 16 automated tests covering:
 - Model serialization and deserialization
 - Evaluation report generation
 - Near-duplicate similarity calculations
-- Diagnostic report consistency
+- Near-duplicate diagnostic report consistency
+- Text grouping and connected components
+- Grouping consistency across batches
+- Group-aware train/test split isolation
+- Group-aware evaluation report generation
 
 ## Training the Model
 
@@ -354,11 +450,14 @@ The project includes:
 - TF-IDF and Logistic Regression combined in a scikit-learn Pipeline
 - Held-out test evaluation
 - Reproducible evaluation and diagnostic scripts
+- Group-aware robustness evaluation
 - Aggregated JSON reports
 - Automated tests using pytest
 - Pinned direct dependencies in `requirements.txt` and `requirements-dev.txt`
 
-The dataset snapshot and filtering criteria affect reproducibility. The raw data is not distributed with the repository.
+The dataset snapshot and filtering criteria affect reproducibility.
+
+The raw data is not distributed with the repository.
 
 ## Continuous Integration
 
@@ -382,7 +481,8 @@ This helps detect regressions when the source code changes.
 
 - Improve minority-class recall.
 - Compare Logistic Regression against additional text classifiers.
-- Add group-aware or time-based evaluation.
+- Add time-based evaluation.
+- Evaluate performance across multiple group-aware splits.
 - Investigate near-duplicate complaint groups more deeply.
 - Add confidence intervals for evaluation metrics.
 - Add a REST API for inference.
