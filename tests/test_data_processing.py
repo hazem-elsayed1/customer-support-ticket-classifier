@@ -136,3 +136,54 @@ def test_clean_dataset_pipeline():
         "Checking account",
         "Student loan"
     }
+
+
+def test_clean_dataset_removes_empty_normalized_text():
+    """Texts that become empty after normalization must be removed."""
+
+    df = pd.DataFrame({
+        "Consumer complaint narrative": [
+            "XXXX",
+            "   ",
+            "My credit card was charged twice.",
+        ],
+        "Product": [
+            "Credit card",
+            "Credit card",
+            "Credit card",
+        ],
+    })
+
+    result = clean_dataset(df)
+
+    assert len(result) == 1
+    assert (
+        result.iloc[0]["Consumer complaint narrative"]
+        == "My credit card was charged twice."
+    )
+
+
+def test_clean_dataset_removes_normalized_label_conflicts():
+    """Remove all rows with conflicting normalized labels."""
+
+    df = pd.DataFrame({
+        "Consumer complaint narrative": [
+            "My card was blocked XXXX",
+            "my card was blocked",
+            "My mortgage payment is incorrect.",
+        ],
+        "Product": [
+            "Credit card",
+            "Checking or savings account",
+            "Mortgage",
+        ],
+    })
+
+    result = clean_dataset(df)
+
+    assert len(result) == 1
+
+    assert (
+        result.iloc[0]["Consumer complaint narrative"]
+        == "My mortgage payment is incorrect."
+    )

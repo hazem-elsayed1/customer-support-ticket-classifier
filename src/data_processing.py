@@ -55,14 +55,30 @@ def remove_normalized_duplicates(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_clean.reset_index(drop=True)
 
+
 def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
     """Apply the complete data cleaning pipeline."""
 
+    # Step 1: Remove missing complaint narratives.
     df_clean = remove_missing_narratives(df)
+
+    # Step 2: Remove texts that become empty after normalization.
+    normalized = df_clean[TEXT_COL].apply(
+        normalize_for_duplicate_check
+    )
+
+    df_clean = df_clean[
+        normalized != ""
+    ].copy()
+
+    # Step 3: Remove conflicting labels for identical narratives.
     df_clean = remove_conflicting_labels(df_clean)
+
+    # Step 4: Remove exact duplicate narratives.
     df_clean = remove_exact_duplicates(df_clean)
 
-    # Check for conflicting labels after normalization.
+
+    # Step 5: Remove all normalized conflicting-label groups.
     normalized = df_clean[TEXT_COL].apply(
         normalize_for_duplicate_check
     )
@@ -71,11 +87,16 @@ def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
         normalized
     )[TARGET_COL].nunique()
 
-    if (normalized_label_counts > 1).any():
-        raise ValueError(
-            "Conflicting labels found after text normalization."
-        )
+    conflicting_normalized_texts = normalized_label_counts[
+        normalized_label_counts > 1
+    ].index
 
+    df_clean = df_clean[
+        ~normalized.isin(conflicting_normalized_texts)
+    ].copy()
+
+    # Step 6: Remove remaining normalized duplicates.
     df_clean = remove_normalized_duplicates(df_clean)
+
 
     return df_clean
